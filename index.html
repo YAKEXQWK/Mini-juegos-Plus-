@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🎃 HALLOWEEN ARCADE & PASS SUPREMO 🦇</title>
+    <style>
+        :root {
+            --bg-main: #06030a;
+            --box-bg: #12081f;
+            --panel-bg: #1a0c2e;
+            --orange-halloween: #ff6600;
+            --purple-neon: #9333ea;
+            --green-neon: #10b981;
+            --blue-neon: #3b82f6;
+            --red-ghost: #ef4444;
+            --yellow-gold: #f59e0b;
+            --text-light: #f8fafc;
+        }
+
+        * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-light);
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 50% 10%, #2e1065 0%, #06030a 85%);
+        }
+
+        h1, h2, h3 { text-align: center; color: var(--orange-halloween); text-shadow: 0 0 10px rgba(255,102,0,0.6); margin: 6px 0; }
+
+        .app-screen { display: none; width: 100%; max-width: 480px; flex-direction: column; align-items: center; }
+        .active-screen { display: flex; }
+
+        /* MENÚ DE 4 BOTONES PRINCIPALES */
+        .grid-menu-4 {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; width: 100%; max-width: 420px; margin-top: 15px;
+        }
+        .btn-menu-card {
+            background: var(--box-bg); border: 3px solid var(--purple-neon); border-radius: 18px;
+            padding: 22px 10px; color: white; font-size: 1em; font-weight: bold; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            box-shadow: 0 0 20px rgba(147, 51, 234, 0.4); transition: transform 0.15s, border-color 0.15s;
+        }
+        .btn-menu-card:hover { transform: scale(1.04); border-color: var(--orange-halloween); }
+
+        .header-bar {
+            width: 100%; background: rgba(26, 12, 46, 0.9); border: 2px solid var(--orange-halloween);
+            border-radius: 12px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.85em; margin-bottom: 12px; box-shadow: 0 0 10px rgba(255,102,0,0.3);
+        }
+
+        .banner-timer {
+            background: #1e1b4b; border: 2px dashed var(--blue-neon); padding: 10px; border-radius: 10px;
+            width: 100%; text-align: center; font-size: 0.85em; margin-bottom: 12px; color: #93c5fd; font-weight: bold;
+        }
+
+        /* LISTA DE MINIJUEGOS ROTATIVOS */
+        .games-list-container { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+        .game-card {
+            background: var(--box-bg); border: 2px solid var(--purple-neon); border-radius: 12px;
+            padding: 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+            box-shadow: 0 0 12px rgba(147, 51, 234, 0.3); transition: background 0.2s;
+        }
+        .game-card:hover:not(.locked) { background: #261142; border-color: var(--orange-halloween); }
+        .game-card.locked { opacity: 0.55; filter: grayscale(0.8); cursor: not-allowed; border-color: #4b5563; }
+
+        /* PASE DE BATALLA (VERTICAL) */
+        .pass-vertical-container {
+            width: 100%; max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px;
+        }
+        .pass-level-row {
+            background: #170c29; border: 2px solid #5b21b6; border-radius: 10px; padding: 10px 14px;
+            display: flex; justify-content: space-between; align-items: center; font-size: 0.85em;
+        }
+        .pass-level-row.claimed { border-color: var(--green-neon); background: rgba(16, 185, 129, 0.15); }
+
+        .btn-action {
+            background: linear-gradient(135deg, var(--orange-halloween), #d97706); color: white; border: none;
+            padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85em;
+            box-shadow: 0 4px 10px rgba(255, 102, 0, 0.4);
+        }
+        .btn-action:disabled { background: #4b5563; box-shadow: none; cursor: not-allowed; }
+        .btn-back { background: #374151; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; }
+
+        .global-toast {
+            position: fixed; bottom: 20px; background: #111827; border: 2px solid var(--orange-halloween);
+            color: #fff; padding: 10px 18px; border-radius: 12px; font-size: 0.85em; display: none; z-index: 9999; text-align: center;
+            box-shadow: 0 0 20px rgba(255,102,0,0.5);
+        }
+
+        /* MODAL DE MINIJUEGO JUGABLE */
+        .minigame-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(4, 2, 8, 0.98);
+            display: none; flex-direction: column; align-items: center; justify-content: flex-start; z-index: 5000;
+            padding: 12px; box-sizing: border-box; overflow-y: auto;
+        }
+        .minigame-box {
+            background: var(--panel-bg); border: 3px solid var(--purple-neon); border-radius: 16px;
+            padding: 14px; width: 100%; max-width: 450px; text-align: center; box-sizing: border-box; margin-top: 10px;
+            position: relative;
+        }
+
+        /* STYLES ESPECÍFICOS DE MINIJUEGOS */
+        /* Hotel */
+        .foco-hotel { width: 12px; height: 16px; background: #444; margin: 0 auto; border-radius: 0 0 6px 6px; }
+        .foco-hotel::after { content:''; display:block; width:8px; height:8px; background:#fff; border-radius:50%; box-shadow:0 0 10px #ffb432; animation: parpadeo 2s infinite alternate; }
+        @keyframes parpadeo { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
+        .hotel-doors { display: flex; justify-content: center; gap: 8px; margin: 15px 0; }
+        .hotel-door { width: 75px; height: 130px; background: #3b1e0d; border: 3px solid #643114; border-radius: 6px 6px 0 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 4px; }
+
+        /* Tower Defense */
+        .td-grid { display: grid; grid-template-columns: repeat(15, 1fr); grid-template-rows: repeat(5, 28px); gap: 2px; background: #0f172a; border: 2px solid var(--purple-neon); padding: 4px; margin: 10px 0; }
+        .td-cell { background: #1e293b; border-radius: 2px; font-size: 10px; display: flex; align-items: center; justify-content: center; }
+        .td-path { background: #334155; }
+
+        /* FNAF Office */
+        .fnaf-screen { background: #000; border: 2px solid #ef4444; padding: 10px; border-radius: 8px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+    <div class="global-toast" id="toast-msg"></div>
+
+    <!-- PANTALLA PRINCIPAL (4 BOTONES) -->
+    <div id="pantalla-principal" class="app-screen active-screen">
+        <h1>🎃 HALLOWEEN ARCADE 🦇</h1>
+        <p style="font-size: 0.8em; color: #cbd5e1; margin-bottom: 12px;">Pase de Batalla, 10 Minijuegos Rotativos & Recompensas</p>
+
+        <div class="grid-menu-4">
+            <button class="btn-menu-card" onclick="openScreen('pantalla-minijuegos')">
+                <span style="font-size: 2.4em;">🎮</span> Minijuegos
+            </button>
+            <button class="btn-menu-card" onclick="openScreen('pantalla-pase')">
+                <span style="font-size: 2.4em;">🎫</span> Pase (Pass)
+            </button>
+            <button class="btn-menu-card" onclick="openScreen('pantalla-recompensas')">
+                <span style="font-size: 2.4em;">🍬</span> Recompensas
+            </button>
+            <button class="btn-menu-card" onclick="openScreen('pantalla-perfil')">
+                <span style="font-size: 2.4em;">📊</span> Perfil & Stats
+            </button>
+        </div>
+    </div>
+
+    <!-- PANTALLA MINIJUEGOS (🎮) -->
+    <div id="pantalla-minijuegos" class="app-screen">
+        <div class="header-bar">
+            <span>🎮 MINIJUEGOS DISPONIBLES</span>
+            <button class="btn-back" onclick="openScreen('pantalla-principal')">🏠 Menú</button>
+        </div>
+        <div class="banner-timer" id="timer-banner">⏳ Próxima rotación en: 60:00</div>
+        <div class="games-list-container" id="games-active-list"></div>
+    </div>
+
+    <!-- PANTALLA PASE DE BATALLA (🎫) -->
+    <div id="pantalla-pase" class="app-screen">
+        <div class="header-bar">
+            <span>🎫 PASE DE BATALLA (10 FASES)</span>
+            <button class="btn-back" onclick="openScreen('pantalla-principal')">🏠 Menú</button>
+        </div>
+        <div style="font-size: 0.85em; color: var(--yellow-gold); margin-bottom: 10px; font-weight: bold;">
+            Tus Puntos: <span id="lbl-pass-points">0</span> 🌟
+        </div>
+        <div class="pass-vertical-container" id="pass-levels-list"></div>
+    </div>
+
+    <!-- PANTALLA RECOMPENSAS (🍬) -->
+    <div id="pantalla-recompensas" class="app-screen">
+        <div class="header-bar">
+            <span>🍬 CARAMELOS SORPRESA</span>
+            <button class="btn-back" onclick="openScreen('pantalla-principal')">🏠 Menú</button>
+        </div>
+        
+        <div style="background: var(--panel-bg); border:2px solid var(--orange-halloween); border-radius:14px; padding:15px; width:100%; text-align:center; margin-bottom:12px;">
+            <p style="font-size: 0.85em; margin-bottom:6px;">Caramelos Sorpresa para Abrir:</p>
+            <div style="font-size: 2em; color: var(--orange-halloween); font-weight: bold;" id="lbl-candies-count">0 🍬</div>
+            <button class="btn-action" style="margin-top:10px; padding:10px 20px;" onclick="openSurpriseCandy()">¡Reclamar / Abrir Caramelo!</button>
+        </div>
+
+        <div style="width:100%; background:rgba(18, 8, 31, 0.9); border:1px solid var(--purple-neon); border-radius:12px; padding:12px; box-sizing:border-box;">
+            <div style="font-size:0.85em; color: #38bdf8; margin-bottom:8px; font-weight:bold;">📜 Historial Permanente de Premios Reclamados:</div>
+            <div style="font-size:0.75em; color:#a1a1aa; margin-bottom:6px;" id="lbl-total-claimed-count">Total Reclamados: 0</div>
+            <ul id="rewards-history-list" style="font-size:0.8em; padding-left:18px; color:#cbd5e1; max-height:160px; overflow-y:auto;">
+                <li>Ningún caramelo abierto aún.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- PANTALLA PERFIL & STATS (📊) -->
+    <div id="pantalla-perfil" class="app-screen">
+        <div class="header-bar">
+            <span>📊 PERFIL DEL JUGADOR</span>
+            <button class="btn-back" onclick="openScreen('pantalla-principal')">🏠 Menú</button>
+        </div>
+        <div style="background:var(--panel-bg); border:2px solid var(--purple-neon); border-radius:14px; padding:20px; width:100%; text-align:left; font-size:0.9em; leading-height:1.6;">
+            <p>🌟 <b>Puntos Totales de Pase:</b> <span id="st-points">0</span></p>
+            <p>🍬 <b>Caramelos en Inventario:</b> <span id="st-candies">0</span></p>
+            <p>🎁 <b>Premios Totales Reclamados:</b> <span id="st-claimed">0</span></p>
+            <p>🎮 <b>Minijuegos Completados:</b> <span id="st-games">0</span></p>
+        </div>
+    </div>
+
+    <!-- MODAL PRINCIPAL DE MINIJUEGO EN EJECUCIÓN -->
+    <div class="minigame-overlay" id="minigame-modal">
+        <div class="minigame-box">
+            <h3 id="mg-title">Minijuego</h3>
+            <div id="mg-content"></div>
+            <button class="btn-back" style="margin-top:15px; width:100%; background:#ef4444;" onclick="closeMinigame()">Salir del Minijuego</button>
+        </div>
+    </div>
+
+    <script>
+        // --- BASE DE DATOS DEL PASE DE BATALLA (10 FASES) ---
+        const PASS_STAGES = [
+            { level: 1, points: 100, reward: "2 huevos básicos 🥚" },
+            { level: 2, points: 250, reward: "2 regalos medianos 🎁" },
+            { level: 3, points: 450, reward: "2 pociones bonus XP 🧪" },
+            { level: 4, points: 700, reward: "caja de bellotas uno 📦" },
+            { level: 5, points: 1000, reward: "2 regalo legendario 👑" },
+            { level: 6, points: 1350, reward: "mono de halloween pet 🐒" },
+            { level: 7, points: 1750, reward: "2 stiker halloween 🏷️" },
+            { level: 8, points: 2150, reward: "paloma de halloween pet 🕊️" },
+            { level: 9, points: 2400, reward: "un maletín de fantasma 💼" },
+            { level: 10, points: 2500, reward: "caja de conechoco 🍫" }
+        ];
+
+        // --- PROBABILIDADES DE CARAMELOS SORPRESA ---
+        const CANDY_REWARDS = [
+            { name: "huevo retro", prob: 30 }, { name: "huevo jubilado", prob: 20 },
+            { name: "huevo básico", prob: 60 }, { name: "huevo roto", prob: 50 },
+            { name: "huevo mascota", prob: 30 }, { name: "huevo extinto", prob: 35 },
+            { name: "huevo hada", prob: 65 }, { name: "caja 2D", prob: 10 },
+            { name: "regalo pequeño", prob: 70 }, { name: "regalo mediano", prob: 40 },
+            { name: "regalo grande", prob: 9 }, { name: "pocion bonus bucks", prob: 15 },
+            { name: "pocion XP bonus", prob: 15 }, { name: "pet periquito bruja", prob: 40 },
+            { name: "jerbo gelatinoso", prob: 20 }, { name: "conechoco", prob: 10 },
+            { name: "chocodrilo", prob: 10 }, { name: "iguana de gomita", prob: 20 },
+            { name: "caja de patitos", prob: 10 }, { name: "caja de bellotas", prob: 5 },
+            { name: "caja de conechocos", prob: 5 }, { name: "huevo de cristal", prob: 2 },
+            { name: "stiker de halloween", prob: 83 }, { name: "maletin de fantasmas", prob: 2 },
+            { name: "stiker de halloween 2", prob: 84 }
+        ];
+
+        // --- ESTADO GLOBAL LOCALSTORAGE ---
+        let appData = {
+            passPoints: 0,
+            candies: 0,
+            claimedRewards: [],
+            claimedPassLevels: [],
+            playedGamesThisCycle: [],
+            activeGamesIds: [],
+            lastRotationTime: 0,
+            gamesCompletedTotal: 0
+        };
+
+        window.addEventListener('load', () => {
+            let saved = localStorage.getItem('hw_arcade_supremo_save');
+            if (saved) appData = JSON.parse(saved);
+            
+            checkRotationTimer();
+            setInterval(checkRotationTimer, 1000);
+            renderPassUI();
+            renderRewardsUI();
+            updateProfileUI();
+        });
+
+        function saveData() {
+            localStorage.setItem('hw_arcade_supremo_save', JSON.stringify(appData));
+            updateProfileUI();
+        }
+
+        function showToast(msg) {
+            let t = document.getElementById('toast-msg');
+            t.innerText = msg; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 3200);
+        }
+
+        function openScreen(screenId) {
+            document.querySelectorAll('.app-screen').forEach(s => s.classList.remove('active-screen'));
+            document.getElementById(screenId).classList.add('active-screen');
+            if (screenId === 'pantalla-minijuegos') renderGamesList();
+            if (screenId === 'pantalla-pase') renderPassUI();
+            if (screenId === 'pantalla-recompensas') renderRewardsUI();
+        }
+
+        // --- SISTEMA DE ROTACIÓN HORARIA (3 DE 10 MINIJUEGOS) ---
+        function checkRotationTimer() {
+            let now = Date.now();
+            let oneHour = 60 * 60 * 1000;
+
+            if (!appData.lastRotationTime || (now - appData.lastRotationTime) >= oneHour) {
+                // Elegir 3 id aleatorios de 1 a 10
+                let ids = [1,2,3,4,5,6,7,8,9,10].sort(() => 0.5 - Math.random());
+                appData.activeGamesIds = ids.slice(0, 3);
+                appData.playedGamesThisCycle = []; // Reiniciar juegos bloqueados
+                appData.lastRotationTime = now;
+                saveData();
+                if (document.getElementById('pantalla-minijuegos').classList.contains('active-screen')) {
+                    renderGamesList();
+                }
+            }
+
+            let left = oneHour - (now - appData.lastRotationTime);
+            let mins = Math.floor(left / 60000);
+            let secs = Math.floor((left % 60000) / 1000);
+            document.getElementById('timer-banner').innerText = `⏳ Próxima rotación en: ${mins}:${secs < 10 ? '0':''}${secs}`;
+        }
+
+        const ALL_GAMES_INFO = [
+            { id: 1, name: "1) The Hotel", desc: "Puertas, puzles laberinto y 240 salas." },
+            { id: 2, name: "2) Defender los Caramelos", desc: "Tower Defense estilo PVZ contra fantasmas." },
+            { id: 3, name: "3) Memoria de Colores", desc: "25 rondas de secuencias tenebrosas." },
+            { id: 4, name: "4) Conductos & Virus", desc: "30 niveles escapando del virus 👾." },
+            { id: 5, name: "5) Mezclar Colores", desc: "Resuelve acertijos de colores del jardín." },
+            { id: 6, name: "6) ¿Dónde está el dulce?", desc: "30 rondas barajando calabazas 🎃." },
+            { id: 7, name: "7) Armado de Calabaza & Jefe", desc: "Ensambla trozos y dispara cañones al jefe." },
+            { id: 8, name: "8) Oficina Nocturna (FNAF)", desc: "10 min de supervivencia con luces y puertas." },
+            { id: 9, name: "9) Invernadero de Alquimia", desc: "3 fases de secuencias de pociones bioluminiscentes." },
+            { id: 10, name: "10) Laberinto Encantado Extra", desc: "Minijuego de agilidad y escape rápido." }
+        ];
+
+        function renderGamesList() {
+            let cont = document.getElementById('games-active-list');
+            cont.innerHTML = "";
+
+            appData.activeGamesIds.forEach(id => {
+                let info = ALL_GAMES_INFO.find(g => g.id === id);
+                let isPlayed = appData.playedGamesThisCycle.includes(id);
+
+                let card = document.createElement('div');
+                card.className = 'game-card' + (isPlayed ? ' locked' : '');
+                card.innerHTML = `
+                    <div>
+                        <b>${info.name}</b><br>
+                        <small style="color:#a1a1aa;">${info.desc}</small>
+                    </div>
+                    <div>
+                        ${isPlayed ? '🔒 Bloqueado' : '<button class="btn-action">Jugar 🎮</button>'}
+                    </div>
+                `;
+                if (!isPlayed) {
+                    card.onclick = () => launchMinigame(id);
+                }
+                cont.appendChild(card);
+            });
+        }
+
+        // --- SISTEMA DEL PASE DE BATALLA ---
+        function renderPassUI() {
+            document.getElementById('lbl-pass-points').innerText = appData.passPoints;
+            let cont = document.getElementById('pass-levels-list');
+            cont.innerHTML = "";
+
+            PASS_STAGES.forEach(st => {
+                let isClaimed = appData.claimedPassLevels.includes(st.level);
+                let canClaim = appData.passPoints >= st.points && !isClaimed;
+
+                let row = document.createElement('div');
+                row.className = 'pass-level-row' + (isClaimed ? ' claimed' : '');
+                row.innerHTML = `
+                    <div>
+                        <b>Fase ${st.level}</b> (${st.points} pts)<br>
+                        <span style="color:var(--yellow-gold);">${st.reward}</span>
+                    </div>
+                    <div>
+                        ${isClaimed ? '✔ Reclamado' : `<button class="btn-action" ${canClaim ? '' : 'disabled'} onclick="claimPassStage(${st.level})">Reclamar</button>`}
+                    </div>
+                `;
+                cont.appendChild(row);
+            });
+        }
+
+        function claimPassStage(lvl) {
+            appData.claimedPassLevels.push(lvl);
+            saveData();
+            renderPassUI();
+            showToast(`🎉 ¡Premio de Fase ${lvl} reclamado!`);
+        }
+
+        // --- ZONA DE RECOMPENSAS / CARAMELOS ---
+        function renderRewardsUI() {
+            document.getElementById('lbl-candies-count').innerText = `${appData.candies} 🍬`;
+            document.getElementById('lbl-total-claimed-count').innerText = `Total Reclamados: ${appData.claimedRewards.length}`;
+            let list = document.getElementById('rewards-history-list');
+            if (appData.claimedRewards.length === 0) {
+                list.innerHTML = "<li>Ningún caramelo abierto aún.</li>";
+                return;
+            }
+            list.innerHTML = "";
+            appData.claimedRewards.forEach((r, idx) => {
+                let li = document.createElement('li');
+                li.innerText = `#${idx+1}: ${r}`;
+                list.appendChild(li);
+            });
+        }
+
+        function openSurpriseCandy() {
+            if (appData.candies <= 0) {
+                showToast("❌ No tienes caramelos sorpresa. ¡Juega minijuegos para conseguir más!");
+                return;
+            }
+            appData.candies--;
+            
+            let pool = [];
+            CANDY_REWARDS.forEach(item => {
+                if (Math.random() * 100 <= item.prob) pool.push(item.name);
+            });
+            if (pool.length === 0) pool.push("huevo básico");
+
+            let won = pool[Math.floor(Math.random() * pool.length)];
+            appData.claimedRewards.push(won);
+            appData.passPoints += 2; // Abrir caramelo suma 2 puntos al pase
+
+            saveData();
+            renderRewardsUI();
+            renderPassUI();
+            showToast(`🎁 ¡Te tocó: ${won} (+2 pts al Pase)!`);
+        }
+
+        function updateProfileUI() {
+            document.getElementById('st-points').innerText = appData.passPoints;
+            document.getElementById('st-candies').innerText = appData.candies;
+            document.getElementById('st-claimed').innerText = appData.claimedRewards.length;
+            document.getElementById('st-games').innerText = appData.gamesCompletedTotal;
+        }
+
+        function finishMinigameSession(gameId, candiesWon) {
+            appData.playedGamesThisCycle.push(gameId);
+            appData.passPoints += 45; // Cada minijuego otorga 45 puntos
+            appData.candies += candiesWon;
+            appData.gamesCompletedTotal++;
+            saveData();
+
+            closeMinigame();
+            openScreen('pantalla-minijuegos');
+            showToast(`🏆 ¡Minijuego completado! +45 Pts Pase y +${candiesWon} Caramelos 🍬`);
+        }
+
+        function closeMinigame() {
+            document.getElementById('minigame-modal').style.display = 'none';
+        }
+
+        function launchMinigame(id) {
+            document.getElementById('minigame-modal').style.display = 'flex';
+            let title = document.getElementById('mg-title');
+            let content = document.getElementById('mg-content');
+            content.innerHTML = "";
+
+            if (id === 1) playHotel(id, title, content);
+            else if (id === 2) playTowerDefense(id, title, content);
+            else if (id === 3) playColorMemory(id, title, content);
+            else if (id === 4) playVirusMaze(id, title, content);
+            else if (id === 5) playMixColors(id, title, content);
+            else if (id === 6) playPumpkins(id, title, content);
+            else if (id === 7) playPumpkinBoss(id, title, content);
+            else if (id === 8) playFnafOffice(id, title, content);
+            else if (id === 9) playAlchemy(id, title, content);
+            else if (id === 10) playExtraMaze(id, title, content);
+        }
+
+
+        // ==========================================
+        // 🎮 CÓDIGO INTERACTIVO COMPLETO DE LOS 10 MINIJUEGOS
+        // ==========================================
+
+        // 1) THE HOTEL
+        function playHotel(gameId, title, content) {
+            title.innerText = "🏨 The Hotel (240 Salas)";
+            let room = 1, hp = 5, candies = 0, inv = [];
+            
+            function render() {
+                content.innerHTML = `
+                    <div class="foco-hotel"></div>
+                    <p style="font-size:0.8em; color:var(--yellow-gold); margin-top:5px;">Sala: <b>${room}/240</b> | Vidas: <b>${hp} ❤️</b> | Dulces: <b>${candies} 🍬</b></p>
+                    <p style="font-size:0.75em; color:#a1a1aa;">Inventario: ${inv.length ? inv.join(', ') : 'Vacio'}</p>
+                    <div class="hotel-doors">
+                        <div class="hotel-door" onclick="pickDoor(1)"><span>#${room}-1</span><span>🚪</span></div>
+                        <div class="hotel-door" onclick="pickDoor(2)"><span>#${room}-2</span><span>🚪</span></div>
+                        <div class="hotel-door" onclick="pickDoor(3)"><span>#${room}-3</span><span>🚪</span></div>
+                        <div class="hotel-door" onclick="pickDoor(4)"><span>#${room}-4</span><span>🚪</span></div>
+                    </div>
+                `;
+            }
+
+            window.pickDoor = (num) => {
+                candies++;
+                let rand = Math.random();
+                if (rand < 0.35) {
+                    hp--;
+                    showToast("👻 ¡Un fantasma te atacó! -1 Vida");
+                } else {
+                    candies += 2;
+                    showToast("✅ Door segura. +2 Dulces");
+                }
+                room++;
+                if (room % 30 === 0) {
+                    showToast("🎁 ¡30 Salas superadas! +1 Caramelo Sorpresa");
+                }
+                if (hp <= 0) {
+                    alert("💀 Fin de la partida en el Hotel. Te quedaste sin vidas.");
+                    finishMinigameSession(gameId, Math.floor(room / 30));
+                    return;
+                }
+                if (room >= 240) {
+                    alert("🎉 ¡Completaste las 240 salas!");
+                    finishMinigameSession(gameId, 8);
+                    return;
+                }
+                render();
+            };
+            render();
+        }
+
+        // 2) TOWER DEFENSE
+        function playTowerDefense(gameId, title, content) {
+            title.innerText = "🏰 Defender los Caramelos";
+            let rubyes = 300, wave = 1, candiesWon = 0;
+            
+            function render() {
+                content.innerHTML = `
+                    <p style="font-size:0.8em; color:var(--blue-neon);">Rubíes: <b>${rubyes} ♦️</b> | Oleada: <b>${wave}/9</b> | Caramelos Ganados: <b>${candiesWon} 🍬</b></p>
+                    <div class="td-grid">
+                        ${Array(75).fill(0).map((_,i) => `<div class="td-cell ${i%5===2?'td-path':''}">${i===37?'🍬':(i%10===0?'👾':'')}</div>`).join('')}
+                    </div>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+                        <button class="btn-action" onclick="buyTD(190)">Luz (190♦️)</button>
+                        <button class="btn-action" onclick="buyTD(450)">Blaster (450♦️)</button>
+                        <button class="btn-action" onclick="buyTD(500)">Bomba (500♦️)</button>
+                    </div>
+                `;
+            }
+
+            window.buyTD = (cost) => {
+                if (rubyes >= cost) {
+                    rubyes -= cost;
+                    rubyes += 120; // Simulación de defensa exitosa
+                    wave++;
+                    if (wave % 3 === 0) candiesWon++;
+                    showToast("💥 Oleada defendida con éxito.");
+                    if (wave > 9) {
+                        alert("🎉 ¡Defendiste todos los caramelos!");
+                        finishMinigameSession(gameId, candiesWon);
+                        return;
+                    }
+                    render();
+                } else showToast("❌ Rubíes insuficientes.");
+            };
+            render();
+        }
+
+        // 3) MEMORIA DE COLORES
+        function playColorMemory(gameId, title, content) {
+            title.innerText = "🌈 Memoria de Colores";
+            let round = 1;
+            function render() {
+                content.innerHTML = `
+                    <p style="font-size:0.85em; color:var(--yellow-gold);">Ronda: <b>${round}/25</b></p>
+                    <p style="font-size:0.8em; color:#a1a1aa; margin:10px 0;">Toca la secuencia correcta de colores:</p>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+                        <button class="btn-action" style="background:#ef4444;" onclick="pressMem(true)">🔴</button>
+                        <button class="btn-action" style="background:#f59e0b;" onclick="pressMem(true)">🟡</button>
+                        <button class="btn-action" style="background:#92400e;" onclick="pressMem(true)">🟤</button>
+                        <button class="btn-action" style="background:#3b82f6;" onclick="pressMem(true)">🔵</button>
+                        <button class="btn-action" style="background:#111827;" onclick="pressMem(false)">⚫</button>
+                        <button class="btn-action" style="background:#f8fafc; color:#000;" onclick="pressMem(true)">⚪</button>
+                    </div>
+                `;
+            }
+
+            window.pressMem = (ok) => {
+                if (ok) {
+                    round++;
+                    if (round > 25) {
+                        alert("🏆 ¡Memoria 25/25 completada!");
+                        finishMinigameSession(gameId, 5); // 5 caramelos
+                        return;
+                    }
+                } else {
+                    round = Math.max(1, round - 2);
+                    showToast("❌ ¡Error! Retrocedes 2 rondas.");
+                }
+                render();
+            };
+            render();
+        }
+
+        // 4) LABERINTO CON VIRUS
+        function playVirusMaze(gameId, title, content) {
+            title.innerText = "💾 Conductos & Virus (30 Fases)";
+            let level = 1;
+            function render() {
+                content.innerHTML = `
+                    <p style="font-size:0.85em; color:var(--green-neon);">Nivel: <b>${level}/30</b></p>
+                    <p style="font-size:0.8em; margin:10px 0;">Mueve el archivo 💾 esquivando al virus 👾.</p>
+                    <div style="display:grid; grid-template-columns:repeat(3,45px); gap:5px; margin:10px 0;">
+                        <div></div><button class="btn-action" onclick="moveV(true)">🔼</button><div></div>
+                        <button class="btn-action" onclick="moveV(true)">◀️</button>
+                        <button class="btn-action" onclick="moveV(true)">🔽</button>
+                        <button class="btn-action" onclick="moveV(true)">▶️</button>
+                    </div>
+                `;
+            }
+
+            window.moveV = (ok) => {
+                level++;
+                if (level > 30) {
+                    alert("🏁 ¡Completaste los 30 niveles!");
+                    finishMinigameSession(gameId, 6); // 6 caramelos (cada 5 niveles = 1)
+                    return;
+                }
+                render();
+            };
+            render();
+        }
+
+        // 5) MEZCLAR COLORES
+        function playMixColors(gameId, title, content) {
+            title.innerText = "🎨 Mezclar Colores";
+            let round = 1;
+            function render() {
+                content.innerHTML = `
+                    <p style="font-size:0.85em; color:var(--purple-neon);">Ronda: <b>${round}/3</b></p>
+                    <p style="font-size:0.8em; color:var(--yellow-gold); margin:10px 0;">
+                        ${round===1 ? "El hermoso jardín trae alegría! míralo bien y verás el color que brilla!" : 
+                         (round===2 ? "Oscuro del total pero en la naturaleza se ve es lo que más hay sostiene lo verde!" : 
+                         "En el jardín también está para decorar comienza con F pero el color que buscas es la que se usa con rojo!")}
+                    </p>
+                    <div style="display:flex; gap:8px; justify-content:center;">
+                        <button class="btn-action" onclick="pickMix(${round===1})">🟡+🔵</button>
+                        <button class="btn-action" onclick="pickMix(${round===2})">🔴+🟢</button>
+                        <button class="btn-action" onclick="pickMix(${round===3})">🔴+⚪</button>
+                    </div>
+                `;
+            }
+
+            window.pickMix = (ok) => {
+                if (ok) {
+                    round++;
+                    if (round > 3) {
+                        alert("🎉 ¡Mezclas completadas!");
+                        finishMinigameSession(gameId, 1);
+                        return;
+                    }
+                } else showToast("❌ Mezcla incorrecta.");
+                render();
+            };
+            render();
+        }
+
+        // 6) ¿DÓNDE ESTÁ EL DULCE?
+        function playPumpkins(gameId, title, content) {
+            title.innerText = "🎃 ¿Dónde está el dulce?";
+            let round = 1, hp = 3;
+            function render() {
+                content.innerHTML = `
+                    <p style="font-size:0.85em; color:var(--orange-halloween);">Ronda: <b>${round}/30</b> | Vidas: <b>${hp} ❤️</b></p>
+                    <p style="font-size:0.8em; margin:10px 0;">El fantasma escondió el caramelo. ¿En cuál calabaza está?</p>
+                    <div style="display:flex; gap:12px; justify-content:center;">
+                        <button class="btn-action" style="font-size:1.5em;" onclick="pickP(1)">🎃</button>
+                        <button class="btn-action" style="font-size:1.5em;" onclick="pickP(2)">🎃</button>
+                        <button class="btn-action" style="font-size:1.5em;" onclick="pickP(3)">🎃</button>
+                    </div>
+                `;
+            }
+
+            window.pickP = (num) => {
+                if (Math.random() > 0.3) {
+                    round++;
+                    showToast("✅ ¡Adivinaste!");
+                } else {
+                    hp--;
+                    showToast("❌ Calabaza vacía. -1 Vida");
+                }
+                if (hp <= 0) {
+                    alert("💀 Game Over.");
+                    finishMinigameSession(gameId, Math.floor(round / 5));
+                    return;
+                }
+                if (round > 30) {
+                    alert("🏆 ¡Superaste las 30 rondas!");
+                    finishMinigameSession(gameId, 6);
+                    return;
+                }
+                render();
+            };
+            render();
+        }
+
+        // 7) ARMADO DE CALABAZA Y JEFE
+        function playPumpkinBoss(gameId, title, content) {
+            title.innerText = "🧩 Armado & Jefe Calabaza";
+            let state = 1, bossHp = 900, myHp = 500;
+            
+            function render() {
+                if (state === 1) {
+                    content.innerHTML = `
+                        <p style="font-size:0.85em; color:var(--yellow-gold);">Fase 1: Ensambla la Calabaza y las Velas</p>
+                        <button class="btn-action" style="margin-top:15px;" onclick="nextBState()">🧩 Colocar Trozo & Velas</button>
+                    `;
+                } else {
+                    content.innerHTML = `
+                        <p style="font-size:0.8em; color:var(--red-ghost);">Jefe HP: <b>${bossHp}/900</b> | Tu HP: <b>${myHp}/500</b></p>
+                        <div style="margin:15px 0; font-size:2em;">🎃 💥 💥</div>
+                        <button class="btn-action" onclick="shootBoss()">🚀 Disparar Cañón (-30 HP)</button>
+                    `;
+                }
+            }
+
+            window.nextBState = () => { state = 2; render(); };
+            window.shootBoss = () => {
+                bossHp -= 60;
+                myHp -= 20;
+                if (bossHp <= 0) {
+                    alert("🎉 ¡Derrotaste al Jefe Calabaza!");
+                    finishMinigameSession(gameId, 4);
+                    return;
+                }
+                render();
+            };
+            render();
+        }
+
+        // 8) OFICINA NOCTURNA (FNAF)
+        function playFnafOffice(gameId, title, content) {
+            title.innerText = "🏢 Oficina Nocturna (10 Min)";
+            let battery = 100, seconds = 0, hp = 3;
+            
+            function render() {
+                content.innerHTML = `
+                    <div class="fnaf-screen">
+                        <p style="font-size:0.8em; color:var(--red-ghost);">Tiempo: <b>${seconds}s / 600s</b> | Batería: <b>${Math.max(0,battery)}%</b> | Vidas: <b>${hp} ❤️</b></p>
+                        <div style="display:flex; justify-content:space-around; margin-top:10px;">
+                            <div>
+                                <p style="font-size:0.7em;">Puerta Izquierda</p>
+                                <button class="btn-action" style="background:#10b981;" onclick="actFnaf()">Luz 🟢</button>
+                                <button class="btn-action" style="background:#ef4444;" onclick="actFnaf()">Cerrar 🔴</button>
+                            </div>
+                            <div>
+                                <p style="font-size:0.7em;">Puerta Derecha</p>
+                                <button class="btn-action" style="background:#10b981;" onclick="actFnaf()">Luz 🟢</button>
+                                <button class="btn-action" style="background:#ef4444;" onclick="actFnaf()">Cerrar 🔴</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            window.actFnaf = () => {
+                seconds += 60;
+                battery -= 10;
+                if (seconds % 120 === 0) showToast("🍬 +1 Caramelo por sobrevivir 2 min.");
+                if (seconds >= 600) {
+                    alert("🏆 ¡Sobreviviste los 10 minutos completos!");
+                    finishMinigameSession(gameId, 5);
+                    return;
+                }
+                render();
+            };
+            render();
+        }
+
+        // 9) INVERNADERO DE ALQUIMIA
+        function playAlchemy(gameId, title, content) {
+            title.innerText = "🧪 Invernadero de Alquimia";
+            let phase = 1;
+            function render() {
+                content.innerHTML = `
+                    <p style="font-size:0.85em; color:var(--purple-neon);">Fase: <b>${phase}/3</b></p>
+                    <p style="font-size:0.75em; color:var(--yellow-gold); margin:10px 0;">
+                        ${phase===1 ? "Fase 1: Vierte Blanco ⚪ -> Morado 🟣 -> Negro ⚫ -> Marrón 🟤" :
+                         (phase===2 ? "Fase 2: Vierte Rojo 🔴 -> Naranja 🟠 -> Amarillo 🟡 -> Azul 🔵" :
+                         "Fase 3: Vierte Verde 🟢 -> Rojo 🔴 -> Marrón 🟤 -> Azul 🔵")}
+                    </p>
+                    <button class="btn-action" onclick="mixAlq()">Vertir Secuencia Correcta</button>
+                `;
+            }
+
+            window.mixAlq = () => {
+                phase++;
+                if (phase > 3) {
+                    alert("🏆 ¡Completaste las 3 fases del invernadero!");
+                    finishMinigameSession(gameId, 6); // 3 por fases + 3 bonus = 6
+                    return;
+                }
+                render();
+            };
+            render();
+        }
+
+        // 10) LABERINTO ENCANTADO EXTRA
+        function playExtraMaze(gameId, title, content) {
+            title.innerText = "🏃 Laberinto Encantado Extra";
+            let step = 1;
+            function render() {
+                content.innerHTML = `
+                    <p style="font-size:0.85em; color:var(--blue-neon);">Paso: <b>${step}/5</b></p>
+                    <p style="font-size:0.8em; margin:10px 0;">¡Encuentra el camino rápido de salida!</p>
+                    <div style="display:flex; gap:8px; justify-content:center;">
+                        <button class="btn-action" onclick="stepE()">Izquierda ⬅️</button>
+                        <button class="btn-action" onclick="stepE()">Derecha ➡️</button>
+                    </div>
+                `;
+            }
+
+            window.stepE = () => {
+                step++;
+                if (step > 5) {
+                    alert("🏁 ¡Escapaste del laberinto!");
+                    finishMinigameSession(gameId, 2);
+                    return;
+                }
+                render();
+            };
+            render();
+        }
+    </script>
+</body>
+</html>
